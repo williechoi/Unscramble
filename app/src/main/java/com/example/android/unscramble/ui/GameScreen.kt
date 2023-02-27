@@ -34,6 +34,8 @@ import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -42,12 +44,20 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.android.unscramble.R
 import com.example.android.unscramble.ui.theme.UnscrambleTheme
 
 
 @Composable
-fun GameScreen(modifier: Modifier = Modifier) {
+fun GameScreen(
+    modifier: Modifier = Modifier,
+    gameViewModel: GameViewModel = viewModel()
+) {
+    // whenever there is a change in the uiState value,
+    // recomposition occurs for the composables using the gameUiState value.
+    val gameUiState by gameViewModel.uiState.collectAsState()
+
     Column(
         modifier = modifier
             .verticalScroll(rememberScrollState())
@@ -56,7 +66,12 @@ fun GameScreen(modifier: Modifier = Modifier) {
     ) {
 
         GameStatus()
-        GameLayout()
+        GameLayout(
+            currentScrambledWord = gameUiState.currentScrambledWord,
+            userGuess = gameViewModel.userGuess,
+            onUserGuessChanged = {gameViewModel.updateUserGuess(it)},
+            onKeyboardDone = { gameViewModel.checkUserGuess() },
+        )
         Row(
             modifier = modifier
                 .fillMaxWidth()
@@ -77,7 +92,7 @@ fun GameScreen(modifier: Modifier = Modifier) {
                     .fillMaxWidth()
                     .weight(1f)
                     .padding(start = 8.dp),
-                onClick = { }
+                onClick = { gameViewModel.checkUserGuess() }
             ) {
                 Text(stringResource(R.string.submit))
             }
@@ -108,13 +123,18 @@ fun GameStatus(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun GameLayout(modifier: Modifier = Modifier) {
+fun GameLayout(
+    onUserGuessChanged: (String) -> Unit,
+    userGuess: String,
+    onKeyboardDone: () -> Unit,
+    currentScrambledWord: String,
+    modifier: Modifier = Modifier
+) {
     Column(
         verticalArrangement = Arrangement.spacedBy(24.dp),
-
         ) {
         Text(
-            text = "scrambleun",
+            text = currentScrambledWord,
             fontSize = 45.sp,
             modifier = modifier.align(Alignment.CenterHorizontally)
         )
@@ -124,17 +144,17 @@ fun GameLayout(modifier: Modifier = Modifier) {
             modifier = Modifier.align(Alignment.CenterHorizontally)
         )
         OutlinedTextField(
-            value = "",
+            value = userGuess,
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
-            onValueChange = { },
+            onValueChange = onUserGuessChanged,
             label = { Text(stringResource(R.string.enter_your_word)) },
             isError = false,
             keyboardOptions = KeyboardOptions.Default.copy(
                 imeAction = ImeAction.Done
             ),
             keyboardActions = KeyboardActions(
-                onDone = { }
+                onDone = { onKeyboardDone() }
             ),
         )
     }
